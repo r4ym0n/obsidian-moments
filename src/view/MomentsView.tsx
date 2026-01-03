@@ -12,6 +12,7 @@ import { MomentsStateManager } from "../state/MomentsStateManager";
 import { MomentsApp } from "../ui/MomentsApp";
 import { MOMENTS_VIEW_TYPE, MOMENTS_ICON, MOMENTS_DISPLAY_NAME } from "./MomentsViewTypes";
 import type { MomentsContextValue } from "../ui/context";
+import { bindMarkdownEvents } from "../helpers/renderMarkdown";
 
 export class MomentsView extends TextFileView {
   plugin: MomentsPlugin;
@@ -38,6 +39,9 @@ export class MomentsView extends TextFileView {
   async onOpen(): Promise<void> {
     // Create root container for Preact
     this.rootEl = this.contentEl.createDiv({ cls: "moments-root" });
+    
+    // Bind markdown event handlers for link clicks, hover, etc.
+    bindMarkdownEvents(this);
   }
   
   async onClose(): Promise<void> {

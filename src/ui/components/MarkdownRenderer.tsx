@@ -7,10 +7,11 @@
  * - Inner container: markdown-preview-view markdown-rendered moments-markdown-preview-view
  * 
  * Supports internal links, tags, embeds, and other Obsidian syntax.
+ * Handles click events for links directly to ensure proper navigation.
  */
 
 import { useRef, useEffect } from "preact/hooks";
-import { MarkdownRenderer as ObsidianMarkdownRenderer, Component, getLinkpath } from "obsidian";
+import { MarkdownRenderer as ObsidianMarkdownRenderer, Component, getLinkpath, Keymap, Menu } from "obsidian";
 import { useApp, useMomentsContext } from "../context";
 
 interface MarkdownRendererProps {
@@ -45,6 +46,138 @@ function applyCheckboxIndexes(dom: HTMLElement) {
   checkboxes.forEach((checkbox, index) => {
     checkbox.dataset.checkboxIndex = String(index);
   });
+}
+
+/**
+ * Parse link info from an anchor element
+ */
+function parseLink(el: HTMLElement): { href: string; displayText: string } | null {
+  const href = el.getAttr("data-href") || el.getAttr("href");
+  if (!href) return null;
+  return { href, displayText: el.getText().trim() };
+}
+
+/**
+ * Bind click handlers directly to links in the rendered markdown
+ * This ensures clicks work properly even within Preact components
+ */
+function bindLinkHandlers(containerEl: HTMLElement, app: any, sourcePath: string) {
+  // Internal links
+  const internalLinks = containerEl.findAll("a.internal-link");
+  for (const link of internalLinks) {
+    // Click handler for navigation
+    link.addEventListener("click", (evt: MouseEvent) => {
+      if (evt.button !== 0 && evt.button !== 1) return;
+      
+      const linkInfo = parseLink(link);
+      if (!linkInfo) return;
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      
+      app.workspace.openLinkText(linkInfo.href, sourcePath, Keymap.isModEvent(evt));
+    });
+    
+    // Middle click handler
+    link.addEventListener("auxclick", (evt: MouseEvent) => {
+      if (evt.button !== 1) return;
+      
+      const linkInfo = parseLink(link);
+      if (!linkInfo) return;
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      
+      app.workspace.openLinkText(linkInfo.href, sourcePath, Keymap.isModEvent(evt));
+    });
+    
+    // Hover handler for preview popup
+    link.addEventListener("mouseover", (evt: MouseEvent) => {
+      const linkInfo = parseLink(link);
+      if (!linkInfo) return;
+      
+      app.workspace.trigger("hover-link", {
+        event: evt,
+        source: "preview",
+        hoverParent: { hoverPopover: null },
+        targetEl: link,
+        linktext: linkInfo.href,
+        sourcePath,
+      });
+    });
+    
+    // Context menu handler
+    link.addEventListener("contextmenu", (evt: MouseEvent) => {
+      const linkInfo = parseLink(link);
+      if (!linkInfo) return;
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      
+      const menu = new Menu();
+      (menu as any).addSections(["title", "open", "action", "view", "info", "", "danger"]);
+      (app.workspace as any).handleLinkContextMenu(menu, linkInfo.href, sourcePath);
+      menu.showAtMouseEvent(evt);
+    });
+    
+    // Prevent drag
+    link.addEventListener("dragstart", (evt: DragEvent) => {
+      evt.preventDefault();
+    });
+  }
+  
+  // External links
+  const externalLinks = containerEl.findAll("a.external-link");
+  for (const link of externalLinks) {
+    link.addEventListener("click", (evt: MouseEvent) => {
+      const linkInfo = parseLink(link);
+      if (!linkInfo) return;
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      
+      if (!linkInfo.href || linkInfo.href.contains(" ")) return;
+      try {
+        new URL(linkInfo.href);
+      } catch (e) {
+        return;
+      }
+      
+      const paneType = Keymap.isModEvent(evt);
+      const clickTarget = typeof paneType === "boolean" ? "" : paneType;
+      window.open(linkInfo.href, clickTarget);
+    });
+    
+    link.addEventListener("contextmenu", (evt: MouseEvent) => {
+      const linkInfo = parseLink(link);
+      if (!linkInfo) return;
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      
+      const menu = new Menu();
+      (menu as any).addSections(["title", "open", "selection", "clipboard", "action", "view", "info", "", "danger"]);
+      (app.workspace as any).handleExternalLinkContextMenu(menu, linkInfo.href);
+      menu.showAtMouseEvent(evt);
+    });
+  }
+  
+  // Tag links - open global search
+  const tagLinks = containerEl.findAll("a.tag");
+  for (const link of tagLinks) {
+    link.addEventListener("click", (evt: MouseEvent) => {
+      if (evt.button !== 0) return;
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+      
+      const tag = link.getText();
+      const searchPlugin = (app as any).internalPlugins.getPluginById("global-search");
+      if (searchPlugin) {
+        searchPlugin.instance.openGlobalSearch(`tag:${tag}`);
+      }
+    });
+  }
 }
 
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
@@ -82,6 +215,8 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       // Post-processing after render
       resolveLinks(containerEl, app, sourcePath);
       applyCheckboxIndexes(containerEl);
+      // Bind click handlers directly to links
+      bindLinkHandlers(containerEl, app, sourcePath);
     });
 
     // Cleanup
