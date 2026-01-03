@@ -39,6 +39,13 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	// Preact JSX configuration
+	jsx: "automatic",
+	jsxImportSource: "preact",
+	alias: {
+		"react": "preact/compat",
+		"react-dom": "preact/compat",
+	},
 });
 
 if (prod) {

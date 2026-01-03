@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "moments",
+	"name": "Moments",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "A minimalist flash note / fleeting thoughts capture plugin. Markdown-backed, enter-to-save, seamlessly integrated with Obsidian.",
+	"author": "oker",
+	"authorUrl": "https://github.com/oker",
 	"isDesktopOnly": false
 }

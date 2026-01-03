@@ -6,6 +6,13 @@
 - Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian.
 - Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`.
 
+## Repository layout (important)
+
+- **Template plugin code**: this repository root (e.g. `src/`, root `manifest.json`, root build config) is the
+  Obsidian plugin template we actively develop.
+- **Reference repo (read-only)**: `obsidian-kanban/` is a separate, standalone Kanban plugin repository used for
+  learning/analysis. **Do not modify any code or config under `obsidian-kanban/`**.
+
 ## Environment & tooling
 
 - Node.js: use current LTS (Node 18+ recommended).
